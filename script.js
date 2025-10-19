@@ -8,7 +8,7 @@
             // Esconder todas as abas
             document.querySelectorAll('.tab-content').forEach(tab => {
                 tab.style.display = 'none';
-            });
+            }); 
             
             // Remover classe active de todas as tabs
             document.querySelectorAll('.tabs li').forEach(li => {
