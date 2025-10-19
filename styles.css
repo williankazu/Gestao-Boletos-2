@@ -1,0 +1,134 @@
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px 0;
+        }
+        .main-container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        .card {
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        .card-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 15px 15px 0 0;
+        }
+        .card-header-title {
+            color: white;
+        }
+        .boleto-item {
+            border-left: 4px solid #667eea;
+            transition: all 0.3s ease;
+            padding: 1rem !important;
+        }
+        .boleto-item:hover {
+            transform: translateX(5px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        .boleto-pago {
+            border-left-color: #48c774;
+            opacity: 0.8;
+        }
+        .boleto-vencido {
+            border-left-color: #f14668;
+        }
+        .boleto-info {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            align-items: center;
+        }
+        .boleto-campo {
+            flex: 1;
+            min-width: 150px;
+        }
+        .boleto-campo strong {
+            display: block;
+            font-size: 0.75rem;
+            color: #7a7a7a;
+            margin-bottom: 0.25rem;
+        }
+        .boleto-campo span {
+            display: block;
+            font-size: 1rem;
+            color: #363636;
+        }
+        .boleto-actions {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        .status-badge {
+            font-size: 0.75rem;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .export-buttons {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        .metric-card {
+            background: white;
+            border-radius: 10px;
+            padding: 1.5rem;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .metric-value {
+            font-size: 2rem;
+            font-weight: bold;
+            margin: 0.5rem 0;
+        }
+        .metric-label {
+            color: #7a7a7a;
+            font-size: 0.9rem;
+        }
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin: 1rem 0;
+        }
+        @media (max-width: 768px) {
+            .boleto-info {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .boleto-campo {
+                width: 100%;
+                min-width: 100%;
+            }
+            .boleto-actions {
+                width: 100%;
+                justify-content: flex-start;
+            }
+            .chart-container {
+                height: 250px;
+            }
+        }
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: #7a7a7a;
+        }
+        .empty-state i {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            opacity: 0.3;
+        }
+        .tabs {
+            margin-bottom: 0 !important;
+        }
+        .tabs ul {
+            border-bottom: none;
+        }
+        .file-input-wrapper {
+            display: none;
+        }
+    
