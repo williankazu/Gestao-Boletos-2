@@ -194,8 +194,6 @@
             0%, 100% { opacity: 1; }
             50% { opacity: 0.6; }
         }
-
-        /* ESTILOS DE IMPRESSÃO */
         @media print {
             body {
                 background: white !important;
@@ -244,5 +242,13 @@
             .print-only {
                 display: block;
             }
+        }
+        .error-banner {
+            background: #ffebee;
+            border-left: 4px solid #f14668;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-radius: 5px;
+            display: none;
         }
     

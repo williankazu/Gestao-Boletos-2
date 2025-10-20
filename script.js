@@ -1,9 +1,37 @@
- 
+
         let boletos = [];
         let editandoIndex = -1;
         let chartStatus = null;
         let chartValores = null;
         let alertasVisiveis = false;
+        let storageAvailable = false;
+
+        // Verificar se localStorage está disponível
+        function testarLocalStorage() {
+            try {
+                const teste = '__teste_storage__';
+                localStorage.setItem(teste, teste);
+                localStorage.removeItem(teste);
+                storageAvailable = true;
+                return true;
+            } catch (e) {
+                storageAvailable = false;
+                mostrarErro('LocalStorage não está disponível. Os dados não serão salvos. Verifique se você não está em modo anônimo ou se os cookies estão bloqueados.');
+                console.error('LocalStorage não disponível:', e);
+                return false;
+            }
+        }
+
+        function mostrarErro(mensagem) {
+            const banner = document.getElementById('errorBanner');
+            const errorMsg = document.getElementById('errorMessage');
+            errorMsg.textContent = mensagem;
+            banner.style.display = 'block';
+            
+            setTimeout(() => {
+                banner.style.display = 'none';
+            }, 10000);
+        }
 
         function mudarAba(aba) {
             document.querySelectorAll('.tab-content').forEach(tab => {
@@ -14,32 +42,54 @@
                 li.classList.remove('is-active');
             });
             
-            document.getElementById(`tab-${aba}`).style.display = 'block';
-            document.querySelector(`[data-tab="${aba}"]`).classList.add('is-active');
+            const tabElement = document.getElementById(`tab-${aba}`);
+            if (tabElement) {
+                tabElement.style.display = 'block';
+            }
+            
+            const liElement = document.querySelector(`[data-tab="${aba}"]`);
+            if (liElement) {
+                liElement.classList.add('is-active');
+            }
             
             if (aba === 'dashboard') {
-                atualizarDashboard();
+                setTimeout(() => atualizarDashboard(), 100);
             }
         }
 
         function toggleAlertas() {
             alertasVisiveis = !alertasVisiveis;
-            document.getElementById('alertasPanel').style.display = alertasVisiveis ? 'block' : 'none';
+            const panel = document.getElementById('alertasPanel');
+            if (panel) {
+                panel.style.display = alertasVisiveis ? 'block' : 'none';
+            }
         }
 
         function togglePrintDropdown() {
-            document.getElementById('printDropdown').classList.toggle('is-active');
+            const dropdown = document.getElementById('printDropdown');
+            if (dropdown) {
+                dropdown.classList.toggle('is-active');
+            }
         }
 
-        // Fechar dropdown ao clicar fora
         document.addEventListener('click', function(e) {
-            if (!e.target.closest('#printDropdown')) {
-                document.getElementById('printDropdown').classList.remove('is-active');
+            const dropdown = document.getElementById('printDropdown');
+            if (dropdown && !e.target.closest('#printDropdown')) {
+                dropdown.classList.remove('is-active');
             }
         });
 
+        function criarDataLocal(dataString) {
+            if (!dataString) return null;
+            const partes = dataString.split('-');
+            return new Date(parseInt(partes[0]), parseInt(partes[1]) - 1, parseInt(partes[2]), 0, 0, 0, 0);
+        }
+
         function imprimirBoletos(periodo) {
-            document.getElementById('printDropdown').classList.remove('is-active');
+            const dropdown = document.getElementById('printDropdown');
+            if (dropdown) {
+                dropdown.classList.remove('is-active');
+            }
             
             const hoje = new Date();
             hoje.setHours(0, 0, 0, 0);
@@ -50,8 +100,8 @@
             switch(periodo) {
                 case 'hoje':
                     boletosFiltrados = boletos.filter(b => {
-                        const venc = new Date(b.dataVencimento + 'T00:00:00');
-                        return venc.toDateString() === hoje.toDateString();
+                        const venc = criarDataLocal(b.dataVencimento);
+                        return venc && venc.toDateString() === hoje.toDateString();
                     });
                     textoPeriodo = 'Boletos que vencem HOJE';
                     break;
@@ -60,8 +110,8 @@
                     const fimSemana = new Date(hoje);
                     fimSemana.setDate(hoje.getDate() + 7);
                     boletosFiltrados = boletos.filter(b => {
-                        const venc = new Date(b.dataVencimento + 'T00:00:00');
-                        return venc >= hoje && venc <= fimSemana;
+                        const venc = criarDataLocal(b.dataVencimento);
+                        return venc && venc >= hoje && venc <= fimSemana;
                     });
                     textoPeriodo = 'Boletos desta SEMANA';
                     break;
@@ -70,8 +120,8 @@
                     const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
                     const fimMes = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0);
                     boletosFiltrados = boletos.filter(b => {
-                        const venc = new Date(b.dataVencimento + 'T00:00:00');
-                        return venc >= inicioMes && venc <= fimMes;
+                        const venc = criarDataLocal(b.dataVencimento);
+                        return venc && venc >= inicioMes && venc <= fimMes;
                     });
                     textoPeriodo = 'Boletos deste MÊS';
                     break;
@@ -87,8 +137,10 @@
                 return;
             }
             
-            // Atualizar informações de impressão
-            document.getElementById('printPeriodo').textContent = textoPeriodo;
+            const periodElement = document.getElementById('printPeriodo');
+            const dataElement = document.getElementById('printData');
+            const rodapeElement = document.getElementById('printDataRodape');
+            
             const dataFormatada = hoje.toLocaleDateString('pt-BR', { 
                 day: '2-digit', 
                 month: 'long', 
@@ -96,17 +148,16 @@
                 hour: '2-digit',
                 minute: '2-digit'
             });
-            document.getElementById('printData').textContent = `Gerado em: ${dataFormatada}`;
-            document.getElementById('printDataRodape').textContent = dataFormatada;
             
-            // Renderizar apenas os boletos filtrados
+            if (periodElement) periodElement.textContent = textoPeriodo;
+            if (dataElement) dataElement.textContent = `Gerado em: ${dataFormatada}`;
+            if (rodapeElement) rodapeElement.textContent = dataFormatada;
+            
             const listaOriginal = document.getElementById('listaBoletos').innerHTML;
             renderizarBoletosParaImpressao(boletosFiltrados);
             
-            // Aguardar um pouco para garantir que o DOM foi atualizado
             setTimeout(() => {
                 window.print();
-                // Restaurar lista original após impressão
                 setTimeout(() => {
                     document.getElementById('listaBoletos').innerHTML = listaOriginal;
                 }, 100);
@@ -115,8 +166,9 @@
 
         function renderizarBoletosParaImpressao(boletosFiltrados) {
             const lista = document.getElementById('listaBoletos');
+            if (!lista) return;
             
-            lista.innerHTML = boletosFiltrados.map((boleto, index) => {
+            lista.innerHTML = boletosFiltrados.map((boleto) => {
                 const status = getStatusBoleto(boleto);
                 let classeItem = '';
                 
@@ -181,7 +233,9 @@
             boletos.forEach((boleto, index) => {
                 if (boleto.dataPagamento) return;
                 
-                const vencimento = new Date(boleto.dataVencimento + 'T00:00:00');
+                const vencimento = criarDataLocal(boleto.dataVencimento);
+                if (!vencimento) return;
+                
                 const diffTime = vencimento - hoje;
                 const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
                 
@@ -225,27 +279,35 @@
             const listaAlertas = document.getElementById('listaAlertas');
             
             if (alertas.length > 0) {
-                notificationBadge.textContent = alertas.length;
-                notificationBadge.style.display = 'block';
+                if (notificationBadge) {
+                    notificationBadge.textContent = alertas.length;
+                    notificationBadge.style.display = 'block';
+                }
                 
-                listaAlertas.innerHTML = alertas.map(alerta => {
-                    const classeCritica = (alerta.tipo === 'critico' || alerta.tipo === 'vencido') ? 'alerta-critico' : '';
-                    return `
-                        <div class="alerta-item ${classeCritica}">
-                            <i class="fas ${alerta.icone}"></i>
-                            <div style="flex: 1;">
-                                <p>${alerta.mensagem}</p>
-                                <p class="has-text-weight-bold">${alerta.valor}</p>
+                if (listaAlertas) {
+                    listaAlertas.innerHTML = alertas.map(alerta => {
+                        const classeCritica = (alerta.tipo === 'critico' || alerta.tipo === 'vencido') ? 'alerta-critico' : '';
+                        return `
+                            <div class="alerta-item ${classeCritica}">
+                                <i class="fas ${alerta.icone}"></i>
+                                <div style="flex: 1;">
+                                    <p>${alerta.mensagem}</p>
+                                    <p class="has-text-weight-bold">${alerta.valor}</p>
+                                </div>
+                                <button class="button is-small is-info" onclick="editarBoletoDoAlerta(${alerta.index})">
+                                    <span class="icon"><i class="fas fa-edit"></i></span>
+                                </button>
                             </div>
-                            <button class="button is-small is-info" onclick="editarBoletoDoAlerta(${alerta.index})">
-                                <span class="icon"><i class="fas fa-edit"></i></span>
-                            </button>
-                        </div>
-                    `;
-                }).join('');
+                        `;
+                    }).join('');
+                }
             } else {
-                notificationBadge.style.display = 'none';
-                listaAlertas.innerHTML = '<p class="has-text-centered has-text-grey">Nenhum alerta no momento! 🎉</p>';
+                if (notificationBadge) {
+                    notificationBadge.style.display = 'none';
+                }
+                if (listaAlertas) {
+                    listaAlertas.innerHTML = '<p class="has-text-centered has-text-grey">Nenhum alerta no momento! 🎉</p>';
+                }
             }
         }
 
@@ -256,16 +318,29 @@
         }
 
         function salvarBoletos() {
+            if (!storageAvailable) {
+                console.warn('LocalStorage não disponível. Dados não serão salvos.');
+                return;
+            }
+            
             try {
                 localStorage.setItem('boletos', JSON.stringify(boletos));
-                console.log('✅ Boletos salvos com sucesso!', boletos);
+                console.log('✅ Boletos salvos com sucesso!', boletos.length, 'boletos');
             } catch (e) {
                 console.error('❌ Erro ao salvar:', e);
-                alert('Erro ao salvar os dados. Verifique o console.');
+                mostrarErro('Erro ao salvar os dados. O armazenamento pode estar cheio.');
             }
         }
 
         function carregarBoletos() {
+            if (!testarLocalStorage()) {
+                boletos = [];
+                renderizarBoletos();
+                atualizarDashboard();
+                verificarAlertas();
+                return;
+            }
+            
             try {
                 const dados = localStorage.getItem('boletos');
                 if (dados) {
@@ -274,7 +349,7 @@
                         ...b,
                         statusBoleto: b.statusBoleto || 'recebido'
                     }));
-                    console.log('✅ Boletos carregados:', boletos);
+                    console.log('✅ Boletos carregados:', boletos.length, 'boletos');
                 } else {
                     boletos = [];
                     console.log('ℹ️ Nenhum boleto salvo anteriormente');
@@ -282,22 +357,34 @@
             } catch (e) {
                 console.error('❌ Erro ao carregar:', e);
                 boletos = [];
+                mostrarErro('Erro ao carregar dados salvos. Iniciando com lista vazia.');
             }
+            
             renderizarBoletos();
             atualizarDashboard();
             verificarAlertas();
         }
 
         function formatarMoeda(valor) {
-            return new Intl.NumberFormat('pt-BR', {
-                style: 'currency',
-                currency: 'BRL'
-            }).format(valor);
+            try {
+                return new Intl.NumberFormat('pt-BR', {
+                    style: 'currency',
+                    currency: 'BRL'
+                }).format(valor);
+            } catch (e) {
+                return `R$ ${parseFloat(valor).toFixed(2)}`;
+            }
         }
 
         function formatarData(data) {
             if (!data) return '-';
-            return new Date(data + 'T00:00:00').toLocaleDateString('pt-BR');
+            try {
+                const dataObj = criarDataLocal(data);
+                if (!dataObj) return data;
+                return dataObj.toLocaleDateString('pt-BR');
+            } catch (e) {
+                return data;
+            }
         }
 
         function getStatusBoleto(boleto) {
@@ -307,7 +394,11 @@
             
             const hoje = new Date();
             hoje.setHours(0, 0, 0, 0);
-            const vencimento = new Date(boleto.dataVencimento + 'T00:00:00');
+            const vencimento = criarDataLocal(boleto.dataVencimento);
+            
+            if (!vencimento) {
+                return { texto: 'Pendente', classe: 'is-warning', icone: 'fa-clock' };
+            }
             
             if (vencimento < hoje) {
                 return { texto: 'Vencido', classe: 'is-danger', icone: 'fa-exclamation-circle' };
@@ -326,90 +417,119 @@
 
             boletos.forEach(boleto => {
                 const status = getStatusBoleto(boleto);
+                const valor = parseFloat(boleto.valor) || 0;
+                
                 if (status.texto === 'Pago') {
-                    totalPagos += boleto.valor;
+                    totalPagos += valor;
                     countPagos++;
                 } else if (status.texto === 'Vencido') {
-                    totalVencidos += boleto.valor;
+                    totalVencidos += valor;
                     countVencidos++;
                 } else {
-                    totalPendentes += boleto.valor;
+                    totalPendentes += valor;
                     countPendentes++;
                 }
             });
 
-            document.getElementById('metricTotal').textContent = boletos.length;
-            document.getElementById('metricPagos').textContent = formatarMoeda(totalPagos);
-            document.getElementById('metricPendentes').textContent = formatarMoeda(totalPendentes);
-            document.getElementById('metricVencidos').textContent = formatarMoeda(totalVencidos);
+            const metricTotal = document.getElementById('metricTotal');
+            const metricPagos = document.getElementById('metricPagos');
+            const metricPendentes = document.getElementById('metricPendentes');
+            const metricVencidos = document.getElementById('metricVencidos');
+            
+            if (metricTotal) metricTotal.textContent = boletos.length;
+            if (metricPagos) metricPagos.textContent = formatarMoeda(totalPagos);
+            if (metricPendentes) metricPendentes.textContent = formatarMoeda(totalPendentes);
+            if (metricVencidos) metricVencidos.textContent = formatarMoeda(totalVencidos);
 
             atualizarGraficos(countPagos, countPendentes, countVencidos, totalPagos, totalPendentes, totalVencidos);
         }
 
         function atualizarGraficos(countPagos, countPendentes, countVencidos, totalPagos, totalPendentes, totalVencidos) {
-            const ctxStatus = document.getElementById('chartStatus').getContext('2d');
-            if (chartStatus) chartStatus.destroy();
-            
-            chartStatus = new Chart(ctxStatus, {
-                type: 'doughnut',
-                data: {
-                    labels: ['Pagos', 'Pendentes', 'Vencidos'],
-                    datasets: [{
-                        data: [countPagos, countPendentes, countVencidos],
-                        backgroundColor: ['#48c774', '#ffdd57', '#f14668'],
-                        borderWidth: 0
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'bottom'
+            try {
+                const ctxStatus = document.getElementById('chartStatus');
+                if (!ctxStatus) return;
+                
+                const context = ctxStatus.getContext('2d');
+                if (!context) return;
+                
+                if (chartStatus) {
+                    chartStatus.destroy();
+                    chartStatus = null;
+                }
+                
+                chartStatus = new Chart(context, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Pagos', 'Pendentes', 'Vencidos'],
+                        datasets: [{
+                            data: [countPagos, countPendentes, countVencidos],
+                            backgroundColor: ['#48c774', '#ffdd57', '#f14668'],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom'
+                            }
                         }
                     }
-                }
-            });
+                });
 
-            const ctxValores = document.getElementById('chartValores').getContext('2d');
-            if (chartValores) chartValores.destroy();
-            
-            chartValores = new Chart(ctxValores, {
-                type: 'bar',
-                data: {
-                    labels: ['Pagos', 'Pendentes', 'Vencidos'],
-                    datasets: [{
-                        label: 'Valor Total (R$)',
-                        data: [totalPagos, totalPendentes, totalVencidos],
-                        backgroundColor: ['#48c774', '#ffdd57', '#f14668'],
-                        borderRadius: 5
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            display: false
-                        }
+                const ctxValores = document.getElementById('chartValores');
+                if (!ctxValores) return;
+                
+                const contextValores = ctxValores.getContext('2d');
+                if (!contextValores) return;
+                
+                if (chartValores) {
+                    chartValores.destroy();
+                    chartValores = null;
+                }
+                
+                chartValores = new Chart(contextValores, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Pagos', 'Pendentes', 'Vencidos'],
+                        datasets: [{
+                            label: 'Valor Total (R$)',
+                            data: [totalPagos, totalPendentes, totalVencidos],
+                            backgroundColor: ['#48c774', '#ffdd57', '#f14668'],
+                            borderRadius: 5
+                        }]
                     },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            ticks: {
-                                callback: function(value) {
-                                    return 'R$ ' + value.toFixed(2);
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    callback: function(value) {
+                                        return 'R$ ' + value.toFixed(2);
+                                    }
                                 }
                             }
                         }
                     }
-                }
-            });
+                });
+            } catch (e) {
+                console.error('Erro ao atualizar gráficos:', e);
+            }
         }
 
         function renderizarBoletos() {
             const lista = document.getElementById('listaBoletos');
             const total = document.getElementById('totalBoletos');
+            
+            if (!lista || !total) return;
             
             total.textContent = `${boletos.length} ${boletos.length === 1 ? 'boleto' : 'boletos'}`;
             
@@ -437,11 +557,12 @@
                 } else {
                     const hoje = new Date();
                     hoje.setHours(0, 0, 0, 0);
-                    const vencimento = new Date(boleto.dataVencimento + 'T00:00:00');
-                    const diffDays = Math.ceil((vencimento - hoje) / (1000 * 60 * 60 * 24));
-                    
-                    if (diffDays <= 2 && diffDays >= 0) {
-                        classeItem = 'boleto-alerta';
+                    const vencimento = criarDataLocal(boleto.dataVencimento);
+                    if (vencimento) {
+                        const diffDays = Math.ceil((vencimento - hoje) / (1000 * 60 * 60 * 24));
+                        if (diffDays <= 2 && diffDays >= 0) {
+                            classeItem = 'boleto-alerta';
+                        }
                     }
                 }
                 
@@ -511,27 +632,52 @@
             editandoIndex = index;
             const boleto = boletos[index];
             
-            document.getElementById('editIndex').value = index;
-            document.getElementById('empresa').value = boleto.empresa;
-            document.getElementById('valor').value = boleto.valor;
-            document.getElementById('dataVencimento').value = boleto.dataVencimento;
-            document.getElementById('dataPagamento').value = boleto.dataPagamento || '';
-            document.getElementById('statusBoleto').value = boleto.statusBoleto || 'recebido';
+            const campos = {
+                editIndex: index,
+                empresa: boleto.empresa,
+                valor: boleto.valor,
+                dataVencimento: boleto.dataVencimento,
+                dataPagamento: boleto.dataPagamento || '',
+                statusBoleto: boleto.statusBoleto || 'recebido'
+            };
             
-            document.getElementById('formTitle').textContent = 'Editar Boleto';
-            document.getElementById('btnText').textContent = 'Atualizar Boleto';
-            document.getElementById('cancelEditBtn').style.display = 'block';
+            Object.keys(campos).forEach(campo => {
+                const element = document.getElementById(campo);
+                if (element) {
+                    element.value = campos[campo];
+                }
+            });
             
-            document.getElementById('boletoForm').scrollIntoView({ behavior: 'smooth' });
+            const formTitle = document.getElementById('formTitle');
+            const btnText = document.getElementById('btnText');
+            const cancelBtn = document.getElementById('cancelEditBtn');
+            
+            if (formTitle) formTitle.textContent = 'Editar Boleto';
+            if (btnText) btnText.textContent = 'Atualizar Boleto';
+            if (cancelBtn) cancelBtn.style.display = 'block';
+            
+            const form = document.getElementById('boletoForm');
+            if (form) {
+                form.scrollIntoView({ behavior: 'smooth' });
+            }
         }
 
         function cancelarEdicao() {
             editandoIndex = -1;
-            document.getElementById('editIndex').value = '-1';
-            document.getElementById('boletoForm').reset();
-            document.getElementById('formTitle').textContent = 'Adicionar Novo Boleto';
-            document.getElementById('btnText').textContent = 'Salvar Boleto';
-            document.getElementById('cancelEditBtn').style.display = 'none';
+            
+            const editIndex = document.getElementById('editIndex');
+            if (editIndex) editIndex.value = '-1';
+            
+            const form = document.getElementById('boletoForm');
+            if (form) form.reset();
+            
+            const formTitle = document.getElementById('formTitle');
+            const btnText = document.getElementById('btnText');
+            const cancelBtn = document.getElementById('cancelEditBtn');
+            
+            if (formTitle) formTitle.textContent = 'Adicionar Novo Boleto';
+            if (btnText) btnText.textContent = 'Salvar Boleto';
+            if (cancelBtn) cancelBtn.style.display = 'none';
         }
 
         function excluirBoleto(index) {
@@ -550,23 +696,32 @@
                 return;
             }
 
-            const csv = [
-                ['Empresa', 'Valor', 'Data Vencimento', 'Data Pagamento', 'Status Boleto', 'Status'],
-                ...boletos.map(b => [
-                    b.empresa,
-                    b.valor.toFixed(2).replace('.', ','),
-                    b.dataVencimento,
-                    b.dataPagamento || '',
-                    b.statusBoleto || 'recebido',
-                    getStatusBoleto(b).texto
-                ])
-            ].map(row => row.join(';')).join('\n');
+            try {
+                const csv = [
+                    ['Empresa', 'Valor', 'Data Vencimento', 'Data Pagamento', 'Status Boleto', 'Status'],
+                    ...boletos.map(b => [
+                        b.empresa,
+                        (parseFloat(b.valor) || 0).toFixed(2).replace('.', ','),
+                        b.dataVencimento,
+                        b.dataPagamento || '',
+                        b.statusBoleto || 'recebido',
+                        getStatusBoleto(b).texto
+                    ])
+                ].map(row => row.join(';')).join('\n');
 
-            const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = `boletos_${new Date().toISOString().split('T')[0]}.csv`;
-            link.click();
+                const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                const url = URL.createObjectURL(blob);
+                link.href = url;
+                link.download = `boletos_${new Date().toISOString().split('T')[0]}.csv`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+            } catch (e) {
+                console.error('Erro ao exportar CSV:', e);
+                alert('Erro ao exportar CSV. Tente novamente.');
+            }
         }
 
         function exportarExcel() {
@@ -575,19 +730,24 @@
                 return;
             }
 
-            const dados = boletos.map(b => ({
-                'Empresa': b.empresa,
-                'Valor': b.valor,
-                'Data Vencimento': b.dataVencimento,
-                'Data Pagamento': b.dataPagamento || '',
-                'Status Boleto': b.statusBoleto || 'recebido',
-                'Status': getStatusBoleto(b).texto
-            }));
+            try {
+                const dados = boletos.map(b => ({
+                    'Empresa': b.empresa,
+                    'Valor': parseFloat(b.valor) || 0,
+                    'Data Vencimento': b.dataVencimento,
+                    'Data Pagamento': b.dataPagamento || '',
+                    'Status Boleto': b.statusBoleto || 'recebido',
+                    'Status': getStatusBoleto(b).texto
+                }));
 
-            const ws = XLSX.utils.json_to_sheet(dados);
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, 'Boletos');
-            XLSX.writeFile(wb, `boletos_${new Date().toISOString().split('T')[0]}.xlsx`);
+                const ws = XLSX.utils.json_to_sheet(dados);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, 'Boletos');
+                XLSX.writeFile(wb, `boletos_${new Date().toISOString().split('T')[0]}.xlsx`);
+            } catch (e) {
+                console.error('Erro ao exportar Excel:', e);
+                alert('Erro ao exportar Excel. Tente novamente.');
+            }
         }
 
         function importarCSV(event) {
@@ -608,7 +768,7 @@
                         if (valores.length >= 3) {
                             novos.push({
                                 empresa: valores[0].trim(),
-                                valor: parseFloat(valores[1].replace(',', '.')),
+                                valor: parseFloat(valores[1].replace(',', '.')) || 0,
                                 dataVencimento: valores[2].trim(),
                                 dataPagamento: valores[3] ? valores[3].trim() : null,
                                 statusBoleto: valores[4] ? valores[4].trim() : 'recebido'
@@ -616,7 +776,7 @@
                         }
                     }
                     
-                    if (confirm(`Importar ${novos.length} boletos? Isso irá adicionar aos boletos existentes.`)) {
+                    if (novos.length > 0 && confirm(`Importar ${novos.length} boletos? Isso irá adicionar aos boletos existentes.`)) {
                         boletos.push(...novos);
                         salvarBoletos();
                         renderizarBoletos();
@@ -625,10 +785,17 @@
                         alert(`✅ ${novos.length} boletos importados com sucesso!`);
                     }
                 } catch (error) {
+                    console.error('Erro ao importar CSV:', error);
                     alert('❌ Erro ao importar CSV: ' + error.message);
                 }
                 event.target.value = '';
             };
+            
+            reader.onerror = function() {
+                alert('Erro ao ler o arquivo CSV.');
+                event.target.value = '';
+            };
+            
             reader.readAsText(file);
         }
 
@@ -652,7 +819,7 @@
                         statusBoleto: row['Status Boleto'] || row.statusBoleto || row['Status_Boleto'] || 'recebido'
                     }));
                     
-                    if (confirm(`Importar ${novos.length} boletos? Isso irá adicionar aos boletos existentes.`)) {
+                    if (novos.length > 0 && confirm(`Importar ${novos.length} boletos? Isso irá adicionar aos boletos existentes.`)) {
                         boletos.push(...novos);
                         salvarBoletos();
                         renderizarBoletos();
@@ -661,50 +828,66 @@
                         alert(`✅ ${novos.length} boletos importados com sucesso!`);
                     }
                 } catch (error) {
+                    console.error('Erro ao importar Excel:', error);
                     alert('❌ Erro ao importar Excel: ' + error.message);
                 }
                 event.target.value = '';
             };
+            
+            reader.onerror = function() {
+                alert('Erro ao ler o arquivo Excel.');
+                event.target.value = '';
+            };
+            
             reader.readAsArrayBuffer(file);
         }
 
-        document.getElementById('boletoForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            const novoBoleto = {
-                empresa: document.getElementById('empresa').value,
-                valor: parseFloat(document.getElementById('valor').value),
-                dataVencimento: document.getElementById('dataVencimento').value,
-                dataPagamento: document.getElementById('dataPagamento').value || null,
-                statusBoleto: document.getElementById('statusBoleto').value
-            };
-            
-            const editIndex = parseInt(document.getElementById('editIndex').value);
-            
-            if (editIndex >= 0) {
-                boletos[editIndex] = novoBoleto;
-            } else {
-                boletos.push(novoBoleto);
-            }
-            
-            salvarBoletos();
-            renderizarBoletos();
-            atualizarDashboard();
-            verificarAlertas();
-            cancelarEdicao();
-            
-            const btn = this.querySelector('button[type="submit"]');
-            const textoOriginal = btn.innerHTML;
-            btn.innerHTML = '<span class="icon"><i class="fas fa-check"></i></span><span>Salvo!</span>';
-            btn.classList.add('is-success');
-            
-            setTimeout(() => {
-                btn.innerHTML = textoOriginal;
-                btn.classList.remove('is-success');
-            }, 2000);
-        });
+        const form = document.getElementById('boletoForm');
+        if (form) {
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const novoBoleto = {
+                    empresa: document.getElementById('empresa').value,
+                    valor: parseFloat(document.getElementById('valor').value) || 0,
+                    dataVencimento: document.getElementById('dataVencimento').value,
+                    dataPagamento: document.getElementById('dataPagamento').value || null,
+                    statusBoleto: document.getElementById('statusBoleto').value
+                };
+                
+                const editIndex = parseInt(document.getElementById('editIndex').value);
+                
+                if (editIndex >= 0 && editIndex < boletos.length) {
+                    boletos[editIndex] = novoBoleto;
+                } else {
+                    boletos.push(novoBoleto);
+                }
+                
+                salvarBoletos();
+                renderizarBoletos();
+                atualizarDashboard();
+                verificarAlertas();
+                cancelarEdicao();
+                
+                const btn = this.querySelector('button[type="submit"]');
+                if (btn) {
+                    const textoOriginal = btn.innerHTML;
+                    btn.innerHTML = '<span class="icon"><i class="fas fa-check"></i></span><span>Salvo!</span>';
+                    btn.classList.add('is-success');
+                    
+                    setTimeout(() => {
+                        btn.innerHTML = textoOriginal;
+                        btn.classList.remove('is-success');
+                    }, 2000);
+                }
+            });
+        }
 
-        window.addEventListener('DOMContentLoaded', carregarBoletos);
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', carregarBoletos);
+        } else {
+            carregarBoletos();
+        }
         
         setInterval(verificarAlertas, 60000);
     

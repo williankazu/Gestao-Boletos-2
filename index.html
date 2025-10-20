@@ -13,7 +13,12 @@
 <body>
     <div class="main-container">
         <div class="container">
-            <!-- Cabeçalho de Impressão -->
+            <!-- Banner de Erro -->
+            <div id="errorBanner" class="error-banner no-print">
+                <strong><i class="fas fa-exclamation-triangle"></i> Aviso:</strong>
+                <span id="errorMessage"></span>
+            </div>
+
             <div class="print-header">
                 <h1>Relatório de Boletos</h1>
                 <p id="printPeriodo"></p>
@@ -30,7 +35,6 @@
                 </div>
             </div>
 
-            <!-- Painel de Alertas -->
             <div id="alertasPanel" class="no-print" style="display: none;">
                 <div class="alertas-box">
                     <h3 class="title is-5 mb-3">
@@ -40,7 +44,6 @@
                 </div>
             </div>
 
-            <!-- Tabs de Navegação -->
             <div class="tabs is-centered is-boxed mb-5 no-print">
                 <ul>
                     <li class="is-active" data-tab="dashboard">
@@ -64,9 +67,7 @@
                 </ul>
             </div>
 
-            <!-- ABA DASHBOARD -->
             <div id="tab-dashboard" class="tab-content">
-                <!-- Métricas -->
                 <div class="columns is-multiline mb-5">
                     <div class="column is-3-desktop is-6-tablet">
                         <div class="metric-card" style="border-top: 4px solid #3273dc;">
@@ -98,7 +99,6 @@
                     </div>
                 </div>
 
-                <!-- Gráficos -->
                 <div class="columns">
                     <div class="column is-half">
                         <div class="card">
@@ -127,7 +127,6 @@
                 </div>
             </div>
 
-            <!-- ABA CADASTRO -->
             <div id="tab-cadastro" class="tab-content" style="display: none;">
                 <div class="card mb-5">
                     <header class="card-header">
@@ -229,7 +228,6 @@
                 </div>
             </div>
 
-            <!-- ABA LISTA -->
             <div id="tab-lista" class="tab-content" style="display: none;">
                 <div class="card">
                     <header class="card-header">
@@ -242,7 +240,6 @@
                     </header>
                     <div class="card-content">
                         <div class="export-buttons mb-4">
-                            <!-- Dropdown de Impressão -->
                             <div class="dropdown" id="printDropdown">
                                 <div class="dropdown-trigger">
                                     <button class="button is-primary" onclick="togglePrintDropdown()">
@@ -310,7 +307,6 @@
                 </div>
             </div>
 
-            <!-- Rodapé de Impressão -->
             <div class="print-footer">
                 <p>Relatório gerado em <span id="printDataRodape"></span></p>
                 <p>Sistema de Gestão de Boletos</p>
@@ -318,6 +314,6 @@
         </div>
     </div>
 
-   <script src="./script.js"></script>
+    <script src="./script.js"></script>
 </body>
 </html>
