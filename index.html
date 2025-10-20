@@ -13,9 +13,25 @@
 <body>
     <div class="main-container">
         <div class="container">
-            <h1 class="title has-text-centered has-text-white mb-6">
-                <i class="fas fa-file-invoice-dollar"></i> Gestão de Boletos
-            </h1>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                <h1 class="title has-text-white mb-0">
+                    <i class="fas fa-file-invoice-dollar"></i> Gestão de Boletos
+                </h1>
+                <div class="notification-bell" onclick="toggleAlertas()">
+                    <i class="fas fa-bell fa-2x has-text-white"></i>
+                    <span class="notification-badge pulse-animation" id="notificationCount" style="display: none;">0</span>
+                </div>
+            </div>
+
+            <!-- Painel de Alertas -->
+            <div id="alertasPanel" style="display: none;">
+                <div class="alertas-box">
+                    <h3 class="title is-5 mb-3">
+                        <i class="fas fa-exclamation-triangle has-text-warning"></i> Alertas de Vencimento
+                    </h3>
+                    <div id="listaAlertas"></div>
+                </div>
+            </div>
 
             <!-- Tabs de Navegação -->
             <div class="tabs is-centered is-boxed mb-5">
@@ -161,6 +177,24 @@
                                                 <i class="fas fa-check-circle"></i>
                                             </span>
                                         </div>
+                                    </div>
+                                </div>
+
+                                <div class="column is-full">
+                                    <div class="field">
+                                        <label class="label">Status do Boleto *</label>
+                                        <div class="control has-icons-left">
+                                            <div class="select is-fullwidth">
+                                                <select id="statusBoleto" required>
+                                                    <option value="recebido">📄 Boleto Recebido</option>
+                                                    <option value="aguardando">⏳ Aguardando Boleto</option>
+                                                </select>
+                                            </div>
+                                            <span class="icon is-small is-left">
+                                                <i class="fas fa-flag"></i>
+                                            </span>
+                                        </div>
+                                        <p class="help">Selecione "Aguardando Boleto" se você tem os dados mas o boleto ainda não chegou</p>
                                     </div>
                                 </div>
                             </div>

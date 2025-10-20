@@ -3,26 +3,111 @@
         let editandoIndex = -1;
         let chartStatus = null;
         let chartValores = null;
+        let alertasVisiveis = false;
 
         function mudarAba(aba) {
-            // Esconder todas as abas
             document.querySelectorAll('.tab-content').forEach(tab => {
                 tab.style.display = 'none';
-            }); 
+            });
             
-            // Remover classe active de todas as tabs
             document.querySelectorAll('.tabs li').forEach(li => {
                 li.classList.remove('is-active');
             });
             
-            // Mostrar aba selecionada
             document.getElementById(`tab-${aba}`).style.display = 'block';
             document.querySelector(`[data-tab="${aba}"]`).classList.add('is-active');
             
-            // Atualizar dashboard se for a aba dashboard
             if (aba === 'dashboard') {
                 atualizarDashboard();
             }
+        }
+
+        function toggleAlertas() {
+            alertasVisiveis = !alertasVisiveis;
+            document.getElementById('alertasPanel').style.display = alertasVisiveis ? 'block' : 'none';
+        }
+
+        function verificarAlertas() {
+            const hoje = new Date();
+            hoje.setHours(0, 0, 0, 0);
+            
+            const alertas = [];
+            
+            boletos.forEach((boleto, index) => {
+                if (boleto.dataPagamento) return; // Já pago, ignora
+                
+                const vencimento = new Date(boleto.dataVencimento + 'T00:00:00');
+                const diffTime = vencimento - hoje;
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                
+                if (diffDays === 0) {
+                    alertas.push({
+                        tipo: 'critico',
+                        icone: 'fa-exclamation-circle',
+                        mensagem: `<strong>${boleto.empresa}</strong> - Vence HOJE!`,
+                        valor: formatarMoeda(boleto.valor),
+                        index: index
+                    });
+                } else if (diffDays === 1) {
+                    alertas.push({
+                        tipo: 'urgente',
+                        icone: 'fa-clock',
+                        mensagem: `<strong>${boleto.empresa}</strong> - Vence AMANHÃ!`,
+                        valor: formatarMoeda(boleto.valor),
+                        index: index
+                    });
+                } else if (diffDays === 2) {
+                    alertas.push({
+                        tipo: 'aviso',
+                        icone: 'fa-bell',
+                        mensagem: `<strong>${boleto.empresa}</strong> - Vence em 2 dias`,
+                        valor: formatarMoeda(boleto.valor),
+                        index: index
+                    });
+                } else if (diffDays < 0) {
+                    const diasVencidos = Math.abs(diffDays);
+                    alertas.push({
+                        tipo: 'vencido',
+                        icone: 'fa-times-circle',
+                        mensagem: `<strong>${boleto.empresa}</strong> - Vencido há ${diasVencidos} ${diasVencidos === 1 ? 'dia' : 'dias'}`,
+                        valor: formatarMoeda(boleto.valor),
+                        index: index
+                    });
+                }
+            });
+            
+            const notificationBadge = document.getElementById('notificationCount');
+            const listaAlertas = document.getElementById('listaAlertas');
+            
+            if (alertas.length > 0) {
+                notificationBadge.textContent = alertas.length;
+                notificationBadge.style.display = 'block';
+                
+                listaAlertas.innerHTML = alertas.map(alerta => {
+                    const classeCritica = (alerta.tipo === 'critico' || alerta.tipo === 'vencido') ? 'alerta-critico' : '';
+                    return `
+                        <div class="alerta-item ${classeCritica}">
+                            <i class="fas ${alerta.icone}"></i>
+                            <div style="flex: 1;">
+                                <p>${alerta.mensagem}</p>
+                                <p class="has-text-weight-bold">${alerta.valor}</p>
+                            </div>
+                            <button class="button is-small is-info" onclick="editarBoletoDoAlerta(${alerta.index})">
+                                <span class="icon"><i class="fas fa-edit"></i></span>
+                            </button>
+                        </div>
+                    `;
+                }).join('');
+            } else {
+                notificationBadge.style.display = 'none';
+                listaAlertas.innerHTML = '<p class="has-text-centered has-text-grey">Nenhum alerta no momento! 🎉</p>';
+            }
+        }
+
+        function editarBoletoDoAlerta(index) {
+            toggleAlertas();
+            mudarAba('cadastro');
+            editarBoleto(index);
         }
 
         function salvarBoletos() {
@@ -40,6 +125,11 @@
                 const dados = localStorage.getItem('boletos');
                 if (dados) {
                     boletos = JSON.parse(dados);
+                    // Migrar boletos antigos sem status
+                    boletos = boletos.map(b => ({
+                        ...b,
+                        statusBoleto: b.statusBoleto || 'recebido'
+                    }));
                     console.log('✅ Boletos carregados:', boletos);
                 } else {
                     boletos = [];
@@ -51,6 +141,7 @@
             }
             renderizarBoletos();
             atualizarDashboard();
+            verificarAlertas();
         }
 
         function formatarMoeda(valor) {
@@ -112,7 +203,6 @@
         }
 
         function atualizarGraficos(countPagos, countPendentes, countVencidos, totalPagos, totalPendentes, totalVencidos) {
-            // Gráfico de Status (Pizza)
             const ctxStatus = document.getElementById('chartStatus').getContext('2d');
             if (chartStatus) chartStatus.destroy();
             
@@ -137,7 +227,6 @@
                 }
             });
 
-            // Gráfico de Valores (Barras)
             const ctxValores = document.getElementById('chartValores').getContext('2d');
             if (chartValores) chartValores.destroy();
             
@@ -193,16 +282,39 @@
 
             lista.innerHTML = boletos.map((boleto, index) => {
                 const status = getStatusBoleto(boleto);
-                const classeItem = boleto.dataPagamento ? 'boleto-pago' : 
-                                  (status.texto === 'Vencido' ? 'boleto-vencido' : '');
+                let classeItem = '';
+                
+                if (boleto.dataPagamento) {
+                    classeItem = 'boleto-pago';
+                } else if (status.texto === 'Vencido') {
+                    classeItem = 'boleto-vencido';
+                } else if (boleto.statusBoleto === 'aguardando') {
+                    classeItem = 'boleto-aguardando';
+                } else {
+                    // Verificar se está próximo do vencimento
+                    const hoje = new Date();
+                    hoje.setHours(0, 0, 0, 0);
+                    const vencimento = new Date(boleto.dataVencimento + 'T00:00:00');
+                    const diffDays = Math.ceil((vencimento - hoje) / (1000 * 60 * 60 * 24));
+                    
+                    if (diffDays <= 2 && diffDays >= 0) {
+                        classeItem = 'boleto-alerta';
+                    }
+                }
+                
+                const statusBoletoTexto = boleto.statusBoleto === 'aguardando' ? 
+                    '<span class="tag is-light is-small ml-2"><i class="fas fa-hourglass-half mr-1"></i> Aguardando</span>' : '';
                 
                 return `
                     <div class="box boleto-item ${classeItem} mb-3">
                         <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; flex-wrap: wrap;">
                             <div style="flex: 1; min-width: 250px;">
-                                <span class="tag ${status.classe} status-badge mb-3">
-                                    <i class="fas ${status.icone}"></i> ${status.texto}
-                                </span>
+                                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem;">
+                                    <span class="tag ${status.classe} status-badge">
+                                        <i class="fas ${status.icone}"></i> ${status.texto}
+                                    </span>
+                                    ${statusBoletoTexto}
+                                </div>
                                 
                                 <div class="boleto-info">
                                     <div class="boleto-campo">
@@ -261,6 +373,7 @@
             document.getElementById('valor').value = boleto.valor;
             document.getElementById('dataVencimento').value = boleto.dataVencimento;
             document.getElementById('dataPagamento').value = boleto.dataPagamento || '';
+            document.getElementById('statusBoleto').value = boleto.statusBoleto || 'recebido';
             
             document.getElementById('formTitle').textContent = 'Editar Boleto';
             document.getElementById('btnText').textContent = 'Atualizar Boleto';
@@ -284,6 +397,7 @@
                 salvarBoletos();
                 renderizarBoletos();
                 atualizarDashboard();
+                verificarAlertas();
             }
         }
 
@@ -294,12 +408,13 @@
             }
 
             const csv = [
-                ['Empresa', 'Valor', 'Data Vencimento', 'Data Pagamento', 'Status'],
+                ['Empresa', 'Valor', 'Data Vencimento', 'Data Pagamento', 'Status Boleto', 'Status'],
                 ...boletos.map(b => [
                     b.empresa,
                     b.valor.toFixed(2).replace('.', ','),
                     b.dataVencimento,
                     b.dataPagamento || '',
+                    b.statusBoleto || 'recebido',
                     getStatusBoleto(b).texto
                 ])
             ].map(row => row.join(';')).join('\n');
@@ -322,6 +437,7 @@
                 'Valor': b.valor,
                 'Data Vencimento': b.dataVencimento,
                 'Data Pagamento': b.dataPagamento || '',
+                'Status Boleto': b.statusBoleto || 'recebido',
                 'Status': getStatusBoleto(b).texto
             }));
 
@@ -340,7 +456,6 @@
                 try {
                     const text = e.target.result;
                     const lines = text.split('\n');
-                    const headers = lines[0].split(';');
                     
                     const novos = [];
                     for (let i = 1; i < lines.length; i++) {
@@ -352,7 +467,8 @@
                                 empresa: valores[0].trim(),
                                 valor: parseFloat(valores[1].replace(',', '.')),
                                 dataVencimento: valores[2].trim(),
-                                dataPagamento: valores[3] ? valores[3].trim() : null
+                                dataPagamento: valores[3] ? valores[3].trim() : null,
+                                statusBoleto: valores[4] ? valores[4].trim() : 'recebido'
                             });
                         }
                     }
@@ -362,6 +478,7 @@
                         salvarBoletos();
                         renderizarBoletos();
                         atualizarDashboard();
+                        verificarAlertas();
                         alert(`✅ ${novos.length} boletos importados com sucesso!`);
                     }
                 } catch (error) {
@@ -388,7 +505,8 @@
                         empresa: row.Empresa || row.empresa || '',
                         valor: parseFloat(row.Valor || row.valor || 0),
                         dataVencimento: row['Data Vencimento'] || row.dataVencimento || row['Data_Vencimento'] || '',
-                        dataPagamento: row['Data Pagamento'] || row.dataPagamento || row['Data_Pagamento'] || null
+                        dataPagamento: row['Data Pagamento'] || row.dataPagamento || row['Data_Pagamento'] || null,
+                        statusBoleto: row['Status Boleto'] || row.statusBoleto || row['Status_Boleto'] || 'recebido'
                     }));
                     
                     if (confirm(`Importar ${novos.length} boletos? Isso irá adicionar aos boletos existentes.`)) {
@@ -396,6 +514,7 @@
                         salvarBoletos();
                         renderizarBoletos();
                         atualizarDashboard();
+                        verificarAlertas();
                         alert(`✅ ${novos.length} boletos importados com sucesso!`);
                     }
                 } catch (error) {
@@ -413,7 +532,8 @@
                 empresa: document.getElementById('empresa').value,
                 valor: parseFloat(document.getElementById('valor').value),
                 dataVencimento: document.getElementById('dataVencimento').value,
-                dataPagamento: document.getElementById('dataPagamento').value || null
+                dataPagamento: document.getElementById('dataPagamento').value || null,
+                statusBoleto: document.getElementById('statusBoleto').value
             };
             
             const editIndex = parseInt(document.getElementById('editIndex').value);
@@ -427,6 +547,7 @@
             salvarBoletos();
             renderizarBoletos();
             atualizarDashboard();
+            verificarAlertas();
             cancelarEdicao();
             
             const btn = this.querySelector('button[type="submit"]');
@@ -441,4 +562,7 @@
         });
 
         window.addEventListener('DOMContentLoaded', carregarBoletos);
+        
+        // Verificar alertas a cada 1 minuto
+        setInterval(verificarAlertas, 60000);
     
