@@ -13,7 +13,14 @@
 <body>
     <div class="main-container">
         <div class="container">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+            <!-- Cabeçalho de Impressão -->
+            <div class="print-header">
+                <h1>Relatório de Boletos</h1>
+                <p id="printPeriodo"></p>
+                <p id="printData"></p>
+            </div>
+
+            <div class="no-print" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
                 <h1 class="title has-text-white mb-0">
                     <i class="fas fa-file-invoice-dollar"></i> Gestão de Boletos
                 </h1>
@@ -24,7 +31,7 @@
             </div>
 
             <!-- Painel de Alertas -->
-            <div id="alertasPanel" style="display: none;">
+            <div id="alertasPanel" class="no-print" style="display: none;">
                 <div class="alertas-box">
                     <h3 class="title is-5 mb-3">
                         <i class="fas fa-exclamation-triangle has-text-warning"></i> Alertas de Vencimento
@@ -34,7 +41,7 @@
             </div>
 
             <!-- Tabs de Navegação -->
-            <div class="tabs is-centered is-boxed mb-5">
+            <div class="tabs is-centered is-boxed mb-5 no-print">
                 <ul>
                     <li class="is-active" data-tab="dashboard">
                         <a onclick="mudarAba('dashboard')">
@@ -235,6 +242,42 @@
                     </header>
                     <div class="card-content">
                         <div class="export-buttons mb-4">
+                            <!-- Dropdown de Impressão -->
+                            <div class="dropdown" id="printDropdown">
+                                <div class="dropdown-trigger">
+                                    <button class="button is-primary" onclick="togglePrintDropdown()">
+                                        <span class="icon">
+                                            <i class="fas fa-print"></i>
+                                        </span>
+                                        <span>Imprimir</span>
+                                        <span class="icon is-small">
+                                            <i class="fas fa-angle-down"></i>
+                                        </span>
+                                    </button>
+                                </div>
+                                <div class="dropdown-menu" role="menu">
+                                    <div class="dropdown-content">
+                                        <a class="dropdown-item" onclick="imprimirBoletos('hoje')">
+                                            <span class="icon"><i class="fas fa-calendar-day"></i></span>
+                                            <span>Hoje</span>
+                                        </a>
+                                        <a class="dropdown-item" onclick="imprimirBoletos('semana')">
+                                            <span class="icon"><i class="fas fa-calendar-week"></i></span>
+                                            <span>Esta Semana</span>
+                                        </a>
+                                        <a class="dropdown-item" onclick="imprimirBoletos('mes')">
+                                            <span class="icon"><i class="fas fa-calendar-alt"></i></span>
+                                            <span>Este Mês</span>
+                                        </a>
+                                        <hr class="dropdown-divider">
+                                        <a class="dropdown-item" onclick="imprimirBoletos('todos')">
+                                            <span class="icon"><i class="fas fa-calendar"></i></span>
+                                            <span>Todos os Boletos</span>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+
                             <button class="button is-success is-light" onclick="exportarCSV()">
                                 <span class="icon">
                                     <i class="fas fa-file-csv"></i>
@@ -266,9 +309,15 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Rodapé de Impressão -->
+            <div class="print-footer">
+                <p>Relatório gerado em <span id="printDataRodape"></span></p>
+                <p>Sistema de Gestão de Boletos</p>
+            </div>
         </div>
     </div>
 
-    <script src="./script.js"></script>
+   <script src="./script.js"></script>
 </body>
 </html>

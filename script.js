@@ -1,4 +1,4 @@
-
+ 
         let boletos = [];
         let editandoIndex = -1;
         let chartStatus = null;
@@ -27,6 +27,151 @@
             document.getElementById('alertasPanel').style.display = alertasVisiveis ? 'block' : 'none';
         }
 
+        function togglePrintDropdown() {
+            document.getElementById('printDropdown').classList.toggle('is-active');
+        }
+
+        // Fechar dropdown ao clicar fora
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('#printDropdown')) {
+                document.getElementById('printDropdown').classList.remove('is-active');
+            }
+        });
+
+        function imprimirBoletos(periodo) {
+            document.getElementById('printDropdown').classList.remove('is-active');
+            
+            const hoje = new Date();
+            hoje.setHours(0, 0, 0, 0);
+            
+            let boletosFiltrados = [];
+            let textoPeriodo = '';
+            
+            switch(periodo) {
+                case 'hoje':
+                    boletosFiltrados = boletos.filter(b => {
+                        const venc = new Date(b.dataVencimento + 'T00:00:00');
+                        return venc.toDateString() === hoje.toDateString();
+                    });
+                    textoPeriodo = 'Boletos que vencem HOJE';
+                    break;
+                    
+                case 'semana':
+                    const fimSemana = new Date(hoje);
+                    fimSemana.setDate(hoje.getDate() + 7);
+                    boletosFiltrados = boletos.filter(b => {
+                        const venc = new Date(b.dataVencimento + 'T00:00:00');
+                        return venc >= hoje && venc <= fimSemana;
+                    });
+                    textoPeriodo = 'Boletos desta SEMANA';
+                    break;
+                    
+                case 'mes':
+                    const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+                    const fimMes = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0);
+                    boletosFiltrados = boletos.filter(b => {
+                        const venc = new Date(b.dataVencimento + 'T00:00:00');
+                        return venc >= inicioMes && venc <= fimMes;
+                    });
+                    textoPeriodo = 'Boletos deste MÊS';
+                    break;
+                    
+                case 'todos':
+                    boletosFiltrados = [...boletos];
+                    textoPeriodo = 'TODOS os boletos';
+                    break;
+            }
+            
+            if (boletosFiltrados.length === 0) {
+                alert('Nenhum boleto encontrado para o período selecionado!');
+                return;
+            }
+            
+            // Atualizar informações de impressão
+            document.getElementById('printPeriodo').textContent = textoPeriodo;
+            const dataFormatada = hoje.toLocaleDateString('pt-BR', { 
+                day: '2-digit', 
+                month: 'long', 
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+            document.getElementById('printData').textContent = `Gerado em: ${dataFormatada}`;
+            document.getElementById('printDataRodape').textContent = dataFormatada;
+            
+            // Renderizar apenas os boletos filtrados
+            const listaOriginal = document.getElementById('listaBoletos').innerHTML;
+            renderizarBoletosParaImpressao(boletosFiltrados);
+            
+            // Aguardar um pouco para garantir que o DOM foi atualizado
+            setTimeout(() => {
+                window.print();
+                // Restaurar lista original após impressão
+                setTimeout(() => {
+                    document.getElementById('listaBoletos').innerHTML = listaOriginal;
+                }, 100);
+            }, 500);
+        }
+
+        function renderizarBoletosParaImpressao(boletosFiltrados) {
+            const lista = document.getElementById('listaBoletos');
+            
+            lista.innerHTML = boletosFiltrados.map((boleto, index) => {
+                const status = getStatusBoleto(boleto);
+                let classeItem = '';
+                
+                if (boleto.dataPagamento) {
+                    classeItem = 'boleto-pago';
+                } else if (status.texto === 'Vencido') {
+                    classeItem = 'boleto-vencido';
+                } else if (boleto.statusBoleto === 'aguardando') {
+                    classeItem = 'boleto-aguardando';
+                }
+                
+                const statusBoletoTexto = boleto.statusBoleto === 'aguardando' ? 
+                    '<span class="tag is-light is-small ml-2"><i class="fas fa-hourglass-half mr-1"></i> Aguardando</span>' : '';
+                
+                return `
+                    <div class="box boleto-item ${classeItem} mb-3">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; flex-wrap: wrap;">
+                            <div style="flex: 1; min-width: 250px;">
+                                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem;">
+                                    <span class="tag ${status.classe} status-badge">
+                                        <i class="fas ${status.icone}"></i> ${status.texto}
+                                    </span>
+                                    ${statusBoletoTexto}
+                                </div>
+                                
+                                <div class="boleto-info">
+                                    <div class="boleto-campo">
+                                        <strong>EMPRESA</strong>
+                                        <span>${boleto.empresa}</span>
+                                    </div>
+                                    
+                                    <div class="boleto-campo">
+                                        <strong>VALOR</strong>
+                                        <span class="has-text-weight-bold">${formatarMoeda(boleto.valor)}</span>
+                                    </div>
+                                    
+                                    <div class="boleto-campo">
+                                        <strong>VENCIMENTO</strong>
+                                        <span>${formatarData(boleto.dataVencimento)}</span>
+                                    </div>
+                                    
+                                    ${boleto.dataPagamento ? `
+                                    <div class="boleto-campo">
+                                        <strong>PAGAMENTO</strong>
+                                        <span class="has-text-success">${formatarData(boleto.dataPagamento)}</span>
+                                    </div>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
         function verificarAlertas() {
             const hoje = new Date();
             hoje.setHours(0, 0, 0, 0);
@@ -34,7 +179,7 @@
             const alertas = [];
             
             boletos.forEach((boleto, index) => {
-                if (boleto.dataPagamento) return; // Já pago, ignora
+                if (boleto.dataPagamento) return;
                 
                 const vencimento = new Date(boleto.dataVencimento + 'T00:00:00');
                 const diffTime = vencimento - hoje;
@@ -125,7 +270,6 @@
                 const dados = localStorage.getItem('boletos');
                 if (dados) {
                     boletos = JSON.parse(dados);
-                    // Migrar boletos antigos sem status
                     boletos = boletos.map(b => ({
                         ...b,
                         statusBoleto: b.statusBoleto || 'recebido'
@@ -291,7 +435,6 @@
                 } else if (boleto.statusBoleto === 'aguardando') {
                     classeItem = 'boleto-aguardando';
                 } else {
-                    // Verificar se está próximo do vencimento
                     const hoje = new Date();
                     hoje.setHours(0, 0, 0, 0);
                     const vencimento = new Date(boleto.dataVencimento + 'T00:00:00');
@@ -341,7 +484,7 @@
                                 </div>
                             </div>
                             
-                            <div class="boleto-actions">
+                            <div class="boleto-actions no-print">
                                 <button class="button is-info is-small" onclick="editarBoletoNaLista(${index})" title="Editar">
                                     <span class="icon">
                                         <i class="fas fa-edit"></i>
@@ -563,6 +706,5 @@
 
         window.addEventListener('DOMContentLoaded', carregarBoletos);
         
-        // Verificar alertas a cada 1 minuto
         setInterval(verificarAlertas, 60000);
     

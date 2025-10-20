@@ -148,6 +148,9 @@
         .alerta-critico i {
             color: #f14668;
         }
+        .dropdown-menu {
+            min-width: 200px;
+        }
         @media (max-width: 768px) {
             .boleto-info {
                 flex-direction: column;
@@ -190,5 +193,56 @@
         @keyframes pulse {
             0%, 100% { opacity: 1; }
             50% { opacity: 0.6; }
+        }
+
+        /* ESTILOS DE IMPRESSÃO */
+        @media print {
+            body {
+                background: white !important;
+                padding: 0 !important;
+            }
+            .no-print {
+                display: none !important;
+            }
+            .main-container {
+                max-width: 100% !important;
+            }
+            .card {
+                box-shadow: none !important;
+                border: 1px solid #ddd !important;
+                page-break-inside: avoid;
+            }
+            .boleto-item {
+                page-break-inside: avoid;
+                border: 1px solid #ddd !important;
+                margin-bottom: 10px !important;
+            }
+            .print-header {
+                display: block !important;
+                text-align: center;
+                margin-bottom: 20px;
+                padding-bottom: 10px;
+                border-bottom: 2px solid #333;
+            }
+            .print-footer {
+                display: block !important;
+                text-align: center;
+                margin-top: 20px;
+                padding-top: 10px;
+                border-top: 1px solid #ddd;
+                font-size: 0.8rem;
+                color: #666;
+            }
+        }
+        .print-header, .print-footer {
+            display: none;
+        }
+        .print-only {
+            display: none;
+        }
+        @media print {
+            .print-only {
+                display: block;
+            }
         }
     
