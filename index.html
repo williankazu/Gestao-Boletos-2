@@ -3,22 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestão de Boletos</title>
+    <title>Gestão de Boletos - Sistema Completo</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.9.4/css/bulma.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <div class="main-container">
         <div class="container">
-            <!-- Banner de Erro -->
-            <div id="errorBanner" class="error-banner no-print">
-                <strong><i class="fas fa-exclamation-triangle"></i> Aviso:</strong>
-                <span id="errorMessage"></span>
-            </div>
-
+            <!-- Cabeçalho de Impressão -->
             <div class="print-header">
                 <h1>Relatório de Boletos</h1>
                 <p id="printPeriodo"></p>
@@ -35,6 +31,7 @@
                 </div>
             </div>
 
+            <!-- Painel de Alertas -->
             <div id="alertasPanel" class="no-print" style="display: none;">
                 <div class="alertas-box">
                     <h3 class="title is-5 mb-3">
@@ -44,6 +41,7 @@
                 </div>
             </div>
 
+            <!-- Tabs de Navegação -->
             <div class="tabs is-centered is-boxed mb-5 no-print">
                 <ul>
                     <li class="is-active" data-tab="dashboard">
@@ -67,7 +65,9 @@
                 </ul>
             </div>
 
+            <!-- ABA DASHBOARD -->
             <div id="tab-dashboard" class="tab-content">
+                <!-- Métricas -->
                 <div class="columns is-multiline mb-5">
                     <div class="column is-3-desktop is-6-tablet">
                         <div class="metric-card" style="border-top: 4px solid #3273dc;">
@@ -99,6 +99,7 @@
                     </div>
                 </div>
 
+                <!-- Gráficos -->
                 <div class="columns">
                     <div class="column is-half">
                         <div class="card">
@@ -127,6 +128,7 @@
                 </div>
             </div>
 
+            <!-- ABA CADASTRO -->
             <div id="tab-cadastro" class="tab-content" style="display: none;">
                 <div class="card mb-5">
                     <header class="card-header">
@@ -188,6 +190,38 @@
 
                                 <div class="column is-full">
                                     <div class="field">
+                                        <label class="label">
+                                            <i class="fas fa-barcode mr-2"></i> Código de Barras
+                                            <button type="button" class="button is-small is-info is-light ml-2" onclick="abrirScanner()">
+                                                <span class="icon"><i class="fas fa-camera"></i></span>
+                                                <span>Câmera</span>
+                                            </button>
+                                            <span class="tag is-info is-light ml-2">
+                                                <i class="fas fa-keyboard mr-1"></i> F2
+                                            </span>
+                                        </label>
+                                        <div class="control has-icons-left has-icons-right">
+                                            <input class="input" type="text" id="codigoBarras" placeholder="Digite, escaneie com câmera ou use leitor físico USB">
+                                            <span class="icon is-small is-left">
+                                                <i class="fas fa-barcode"></i>
+                                            </span>
+                                            <span class="icon is-small is-right" style="pointer-events: auto; cursor: help;" title="Campo compatível com leitor físico USB">
+                                                <i class="fas fa-usb" style="color: #48c774;"></i>
+                                            </span>
+                                        </div>
+                                        <p class="help">
+                                            <i class="fas fa-info-circle"></i> 
+                                            <strong>3 formas de usar:</strong> 
+                                            1️⃣ Digite manualmente | 
+                                            2️⃣ Clique em "Câmera" | 
+                                            3️⃣ Use leitor USB (automático) | 
+                                            <strong>Atalho:</strong> Pressione <kbd>F2</kbd> para ativar o campo
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div class="column is-full">
+                                    <div class="field">
                                         <label class="label">Status do Boleto *</label>
                                         <div class="control has-icons-left">
                                             <div class="select is-fullwidth">
@@ -228,7 +262,70 @@
                 </div>
             </div>
 
+            <!-- ABA LISTA -->
             <div id="tab-lista" class="tab-content" style="display: none;">
+                <!-- Filtro por Período -->
+                <div class="filtro-periodo-box no-print">
+                    <div class="columns is-vcentered">
+                        <div class="column is-narrow">
+                            <h3 class="title is-5 mb-0">
+                                <i class="fas fa-filter mr-2"></i> Filtrar por Período
+                            </h3>
+                        </div>
+                        <div class="column">
+                            <div class="field has-addons">
+                                <div class="control is-expanded">
+                                    <div class="select is-fullwidth">
+                                        <select id="filtroPeriodo" onchange="aplicarFiltroPeriodo()">
+                                            <option value="todos">📅 Todos os Períodos</option>
+                                            <option value="hoje">📆 Hoje</option>
+                                            <option value="semana">📊 Esta Semana</option>
+                                            <option value="mes">📈 Este Mês</option>
+                                            <option value="ano">📉 Este Ano</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="control">
+                                    <button class="button is-info" onclick="buscarPorCodigoBarras()">
+                                        <span class="icon"><i class="fas fa-barcode"></i></span>
+                                        <span>Buscar por Código</span>
+                                    </button>
+                                </div>
+                                <div class="control">
+                                    <button class="button is-success is-light" onclick="ativarModoLeituraRapida()" title="Modo para cadastrar vários boletos rapidamente com leitor físico">
+                                        <span class="icon"><i class="fas fa-usb"></i></span>
+                                        <span>Modo Leitura Rápida</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Estatísticas do Período -->
+                    <div class="estatisticas-periodo" id="estatisticasPeriodo">
+                        <div class="stat-item">
+                            <div class="stat-valor" id="statQuantidade">0</div>
+                            <div class="stat-label">Boletos</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-valor has-text-success" id="statPagos">R$ 0,00</div>
+                            <div class="stat-label">Pagos</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-valor has-text-warning" id="statPendentes">R$ 0,00</div>
+                            <div class="stat-label">Pendentes</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-valor has-text-danger" id="statVencidos">R$ 0,00</div>
+                            <div class="stat-label">Vencidos</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-valor" id="statTotal">R$ 0,00</div>
+                            <div class="stat-label">Total Geral</div>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="card">
                     <header class="card-header">
                         <p class="card-header-title">
@@ -239,7 +336,8 @@
                         </div>
                     </header>
                     <div class="card-content">
-                        <div class="export-buttons mb-4">
+                        <div class="export-buttons mb-4 no-print">
+                            <!-- Dropdown de Impressão -->
                             <div class="dropdown" id="printDropdown">
                                 <div class="dropdown-trigger">
                                     <button class="button is-primary" onclick="togglePrintDropdown()">
@@ -307,10 +405,28 @@
                 </div>
             </div>
 
+            <!-- Rodapé de Impressão -->
             <div class="print-footer">
                 <p>Relatório gerado em <span id="printDataRodape"></span></p>
                 <p>Sistema de Gestão de Boletos</p>
             </div>
+        </div>
+    </div>
+
+    <!-- Scanner de Código de Barras -->
+    <div class="scanner-container" id="scannerContainer">
+        <div style="text-align: center;">
+            <h2 class="title has-text-white mb-4">
+                <i class="fas fa-camera mr-2"></i> Scanner de Código de Barras
+            </h2>
+            <div id="scanner-video"></div>
+            <div class="scanner-controls">
+                <button class="button is-danger is-large" onclick="fecharScanner()">
+                    <span class="icon"><i class="fas fa-times"></i></span>
+                    <span>Cancelar</span>
+                </button>
+            </div>
+            <p class="has-text-white mt-3">Posicione o código de barras do boleto na frente da câmera</p>
         </div>
     </div>
 
